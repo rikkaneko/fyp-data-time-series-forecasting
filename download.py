@@ -27,12 +27,26 @@ import dateutil.parser
 
 
 # Define variable
+# For traffic data, the earliest available START_TIME = '2021-09-07T09:08'
+# For journey data, the earliest available START_TIME = '2021-05-27T08:53'
+OPTIONS: dict[str, Any] = {
+  'traffic-data': {
+    'START_TIME': '2021-09-07T09:08',
+    'END_TIME': '2021-09-07T09:15',
+    'DATA_DIR': Path('data/traffic-detectors-speed')
+  },
+  'journey-data': {
+    'START_TIME': '2021-05-27T08:53',
+    'END_TIME': '2021-05-27T09:00',
+    'DATA_DIR': Path('data/journey-data')
+  }
+}
 START_TIME = '2021-09-07T09:08'
 END_TIME = '2021-09-07T10:00'
 
 # Build data dir for traffic data
-data_dir = Path('data/traffic-detectors-speed')
-data_dir.mkdir(parents=True, exist_ok=True)
+for _, _content in OPTIONS.items():
+  _content['DATA_DIR'].mkdir(parents=True, exist_ok=True)
 
 
 # Generate timestamp in YYYYMMDD-HHMM from start_date to end_data (exclusive)
@@ -74,7 +88,6 @@ def process_traffic_detectors_data(content: dict[str, Any]) -> (dict[str, list[l
       if type(detector['lanes']['lane']) is not list:
         lane = detector['lanes']['lane']
         detector['lanes']['lane'] = [lane]
-      lane_n = len(detector['lanes']['lane'])
       for lane in detector['lanes']['lane']:
         lane_id = to_snake(lane['lane_id'])
         lanes[f'{lane_id}_speed'] = lane['speed']
@@ -85,8 +98,22 @@ def process_traffic_detectors_data(content: dict[str, Any]) -> (dict[str, list[l
   return results
 
 
-LIMIT = 16
-sem = asyncio.BoundedSemaphore(LIMIT)
+def process_journey_time_data(data: dict[str, Any]) -> (str, list[list[str]]):
+  header = ['location', 'destination', 'journey_time', 'color']
+  results: list[list[str]] = [header]
+  captured = ''
+  for indi in data['jtis_journey_list']['jtis_journey_time']:
+    captured = indi['CAPTURE_DATE']
+    results.append([
+      indi['LOCATION_ID'], indi['DESTINATION_ID'], indi['JOURNEY_DATA'], indi['COLOUR_ID']
+    ])
+  timestamp: str = dateutil.parser.isoparse(captured).strftime('%Y%m%d-%H%M%S')
+  return timestamp, results
+
+
+REQUEST_LIMIT = 16
+CONCURRENT_LIMIT = 32
+sem = asyncio.BoundedSemaphore(REQUEST_LIMIT)
 
 
 # Fetch traffic data
@@ -108,7 +135,7 @@ async def fetch_traffic_detectors_data(timestamp: str):
         return
 
       for title, content in speed_data.items():
-        output_file = Path(data_dir, title + '.csv')
+        output_file = Path(OPTIONS['traffic-data']['DATA_DIR'], title + '.csv')
         if output_file.exists():
           print(f'Duplicated file {output_file} (#timestamp={timestamp})')
           continue
@@ -118,16 +145,54 @@ async def fetch_traffic_detectors_data(timestamp: str):
           await writer.writerows(content)
 
 
+async def fetch_journey_time_data(timestamp: str):
+  async with sem, aiohttp.ClientSession() as client:
+    async with client.get(url='https://api.data.gov.hk/v1/historical-archive/get-file',
+                          params={'url': 'https://resource.data.one.gov.hk/td/jss/Journeytimev2.xml',
+                                  'time': timestamp}) as res:
+      if not res.ok:
+        print(f'Unable to fetch traffic detectors data (#timestamp={timestamp})')
+        return
+
+      try:
+        xml_data = await res.text()
+        data: dict[str, Any] = xmltodict.parse(xml_data, xml_attribs=False)
+        title, journey_data = process_journey_time_data(data)
+      except:
+        print(f'Invalid traffic data (#timestamp={timestamp})')
+        return
+
+      output_file = Path(OPTIONS['journey-data']['DATA_DIR'], title + '.csv')
+      if output_file.exists():
+        print(f'Duplicated file {output_file} (#timestamp={timestamp})')
+        return
+      print(f'Download {output_file} (#timestamp={timestamp})')
+      async with aiofile.async_open(output_file, 'w') as f:
+        writer = AsyncWriter(f)
+        await writer.writerows(journey_data)
+
+
+def fetch_data(dataset: str, timestamp: str):
+  match dataset:
+    case 'traffic-data':
+      return fetch_traffic_detectors_data(timestamp)
+    case 'journey-data':
+      return fetch_journey_time_data(timestamp)
+    case _:
+      raise Exception('Undefined datasets.')
+
+
 async def fetch_all():
   tasks = []
   n = 0
-  for t in make_timestamp(START_TIME, END_TIME):
-    if n >= LIMIT:
-      await asyncio.gather(*tasks)
-      tasks.clear()
-      n = 0
-    tasks.append(loop.create_task(fetch_traffic_detectors_data(t)))
-    n += 1
+  for dataset, content in OPTIONS.items():
+    for t in make_timestamp(content['START_TIME'], content['END_TIME']):
+      if n >= CONCURRENT_LIMIT:
+        await asyncio.gather(*tasks)
+        tasks.clear()
+        n = 0
+      tasks.append(loop.create_task(fetch_data(dataset, t)))
+      n += 1
   await asyncio.gather(*tasks)
 
 
