@@ -26,6 +26,15 @@ import xmltodict
 import dateutil.parser
 
 
+# Define variable
+START_TIME = '2021-09-07T09:08'
+END_TIME = '2021-09-07T10:00'
+
+# Build data dir for traffic data
+data_dir = Path('data/traffic-detectors-speed')
+data_dir.mkdir(parents=True, exist_ok=True)
+
+
 # Generate timestamp in YYYYMMDD-HHMM from start_date to end_data (exclusive)
 def make_timestamp(start_date: str, end_data: str):
   start: datetime = dateutil.parser.isoparse(start_date)
@@ -45,69 +54,86 @@ def process_traffic_detectors_data(content: dict[str, Any]) -> (dict[str, list[l
   # speed: Average traffic speed of lanes (km/h)
   # occupancy: Average Occupancy of lane (%)
   # s.d.: Average standard deviation of lanes
-  header = ['detector_id', 'direction', 'speed', 'occupancy', 'volume', 's.d.']
+  header = ['detector_id', 'direction', *[f'{k}_speed'
+                                          for k in ['fast_lane', 'middle_lane_1', 'middle_lane_2', 'slow_lane']
+                                          ]]
   periods = content['raw_speed_volume_list']['periods']['period']
   # Map direction to id
   direct2id: Callable[[str], int] = lambda direction: {
     'North': 1, 'East': 2, 'South': 3, 'West': 4, 'North East': 1,
     'South East': 2, 'North West': 3, 'South West': 4}[direction]
+  to_snake: Callable[[str], str] = lambda s: s.replace(' ', '_').lower()
+
   results: dict[str, list[list[str]]] = {}
   for period in periods:
     speed_data: list[list[str]] = [header]
     title = f'{date}-{period["period_from"].replace(":", "")}_{period["period_to"].replace(":", "")}'
     for detector in period['detectors']['detector']:
-      lanes: dict[str, float] = {'speed': 0, 'occupancy': 0, 'volume': 0, 's.d.': 0}
+      lanes: dict[str, float] = dict([(header[i], 0) for i in range(2, len(header))])
       # Special cases if elements not parsed as list
       if type(detector['lanes']['lane']) is not list:
         lane = detector['lanes']['lane']
         detector['lanes']['lane'] = [lane]
       lane_n = len(detector['lanes']['lane'])
       for lane in detector['lanes']['lane']:
-        lanes['speed'] += float(lane['speed']) / lane_n
-        lanes['occupancy'] += float(lane['occupancy']) / lane_n
-        lanes['volume'] += float(lane['volume'])
-        lanes['s.d.'] += float(lane['s.d.']) ** 2 / lane_n
-      lanes['s.d.'] **= 1/2
+        lane_id = to_snake(lane['lane_id'])
+        lanes[f'{lane_id}_speed'] = lane['speed']
       speed_data.append([
-        detector['detector_id'], direct2id(detector['direction']), f'{lanes["speed"]:.4f}',
-        f'{lanes["occupancy"]:.4f}', f'{lanes["volume"]:.4f}', f'{lanes["s.d."]:.4f}'
+        detector['detector_id'], direct2id(detector['direction']), *[lanes[header[k]] for k in range(2, len(header))]
       ])
     results[title] = speed_data
   return results
 
 
-# Fetch traffic data
-async def fetch_traffic_detectors_data():
-  data_dir = Path('data/traffic-detectors-speed')
-  data_dir.mkdir(parents=True, exist_ok=True)
-  sem = asyncio.BoundedSemaphore(25)
-  for timestamp in make_timestamp('2022-09-01', '2022-11-01'):
-    async with sem, aiohttp.ClientSession() as client:
-      async with client.get(url='https://api.data.gov.hk/v1/historical-archive/get-file',
-                            params={'url': 'https://resource.data.one.gov.hk/td/traffic-detectors/rawSpeedVol-all.xml',
-                                    'time': timestamp}) as res:
-        if not res.ok:
-          print(f'Unable to fetch raw data of traffic detectors on {timestamp}')
-          continue
+LIMIT = 16
+sem = asyncio.BoundedSemaphore(LIMIT)
 
+
+# Fetch traffic data
+async def fetch_traffic_detectors_data(timestamp: str):
+  async with sem, aiohttp.ClientSession() as client:
+    async with client.get(url='https://api.data.gov.hk/v1/historical-archive/get-file',
+                          params={'url': 'https://resource.data.one.gov.hk/td/traffic-detectors/rawSpeedVol-all.xml',
+                                  'time': timestamp}) as res:
+      if not res.ok:
+        print(f'Unable to fetch traffic detectors data (#timestamp={timestamp})')
+        return
+
+      try:
         xml_data = await res.text()
         data: dict[str, Any] = xmltodict.parse(xml_data, xml_attribs=False)
         speed_data = process_traffic_detectors_data(data)
-        for title, content in speed_data.items():
-          output_file = Path(data_dir, title + '.csv')
-          if output_file.exists():
-            print(f'Duplicated file {output_file} (#timestamp={timestamp})')
-            continue
-          print(f'Download {output_file} (#timestamp={timestamp})')
-          async with aiofile.async_open(output_file, 'w') as f:
-            writer = AsyncWriter(f)
-            loop.create_task(writer.writerows(content))
+      except:
+        print(f'Invalid traffic data (#timestamp={timestamp})')
+        return
+
+      for title, content in speed_data.items():
+        output_file = Path(data_dir, title + '.csv')
+        if output_file.exists():
+          print(f'Duplicated file {output_file} (#timestamp={timestamp})')
+          continue
+        print(f'Download {output_file} (#timestamp={timestamp})')
+        async with aiofile.async_open(output_file, 'w') as f:
+          writer = AsyncWriter(f)
+          await writer.writerows(content)
+
+
+async def fetch_all():
+  tasks = []
+  n = 0
+  for t in make_timestamp(START_TIME, END_TIME):
+    if n >= LIMIT:
+      await asyncio.gather(*tasks)
+      tasks.clear()
+    tasks.append(loop.create_task(fetch_traffic_detectors_data(t)))
+    n += 1
+  await asyncio.gather(*tasks)
 
 
 if __name__ == '__main__':
   loop = asyncio.new_event_loop()
   asyncio.set_event_loop(loop)
   try:
-    loop.run_until_complete(fetch_traffic_detectors_data())
+    loop.run_until_complete(fetch_all())
   except KeyboardInterrupt:
     print('Interrupted by keyboard')
