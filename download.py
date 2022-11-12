@@ -25,24 +25,23 @@ import aiofile
 import xmltodict
 import dateutil.parser
 
-
 # Define variable
 # For traffic data, the earliest available START_TIME = '2021-09-07T09:08'
 # For journey data, the earliest available START_TIME = '2021-05-27T08:53'
+REQUEST_LIMIT = 25
+CONCURRENT_LIMIT = 150
 OPTIONS: dict[str, Any] = {
   'traffic-data': {
-    'START_TIME': '2021-09-07T09:08',
-    'END_TIME': '2021-09-07T09:15',
+    'START_TIME': '2021-11-11',
+    'END_TIME': '2022-11-11',
     'DATA_DIR': Path('data/traffic-detectors-speed')
   },
   'journey-data': {
-    'START_TIME': '2021-05-27T08:53',
-    'END_TIME': '2021-05-27T09:00',
+    'START_TIME': '2021-11-11',
+    'END_TIME': '2022-11-11',
     'DATA_DIR': Path('data/journey-data')
   }
 }
-START_TIME = '2021-09-07T09:08'
-END_TIME = '2021-09-07T10:00'
 
 # Build data dir for traffic data
 for _, _content in OPTIONS.items():
@@ -111,8 +110,6 @@ def process_journey_time_data(data: dict[str, Any]) -> (str, list[list[str]]):
   return timestamp, results
 
 
-REQUEST_LIMIT = 16
-CONCURRENT_LIMIT = 32
 sem = asyncio.BoundedSemaphore(REQUEST_LIMIT)
 
 
@@ -134,15 +131,15 @@ async def fetch_traffic_detectors_data(timestamp: str):
         print(f'Invalid traffic data (#timestamp={timestamp})')
         return
 
-      for title, content in speed_data.items():
-        output_file = Path(OPTIONS['traffic-data']['DATA_DIR'], title + '.csv')
-        if output_file.exists():
-          print(f'Duplicated file {output_file} (#timestamp={timestamp})')
-          continue
-        print(f'Download {output_file} (#timestamp={timestamp})')
-        async with aiofile.async_open(output_file, 'w') as f:
-          writer = AsyncWriter(f)
-          await writer.writerows(content)
+  for title, content in speed_data.items():
+    output_file = Path(OPTIONS['traffic-data']['DATA_DIR'], title + '.csv')
+    if output_file.exists():
+      print(f'Duplicated file {output_file} (#timestamp={timestamp})')
+      continue
+    print(f'Download {output_file} (#timestamp={timestamp})')
+    async with aiofile.async_open(output_file, 'w') as f:
+      writer = AsyncWriter(f)
+      await writer.writerows(content)
 
 
 async def fetch_journey_time_data(timestamp: str):
@@ -162,14 +159,14 @@ async def fetch_journey_time_data(timestamp: str):
         print(f'Invalid traffic data (#timestamp={timestamp})')
         return
 
-      output_file = Path(OPTIONS['journey-data']['DATA_DIR'], title + '.csv')
-      if output_file.exists():
-        print(f'Duplicated file {output_file} (#timestamp={timestamp})')
-        return
-      print(f'Download {output_file} (#timestamp={timestamp})')
-      async with aiofile.async_open(output_file, 'w') as f:
-        writer = AsyncWriter(f)
-        await writer.writerows(journey_data)
+  output_file = Path(OPTIONS['journey-data']['DATA_DIR'], title + '.csv')
+  if output_file.exists():
+    print(f'Duplicated file {output_file} (#timestamp={timestamp})')
+    return
+  print(f'Download {output_file} (#timestamp={timestamp})')
+  async with aiofile.async_open(output_file, 'w') as f:
+    writer = AsyncWriter(f)
+    await writer.writerows(journey_data)
 
 
 def fetch_data(dataset: str, timestamp: str):
