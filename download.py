@@ -80,8 +80,8 @@ def process_traffic_detectors_data(content: dict[str, Any]) -> (dict[str, list[l
 async def fetch_traffic_detectors_data():
   data_dir = Path('data/traffic-detectors-speed')
   data_dir.mkdir(parents=True, exist_ok=True)
-  sem = asyncio.BoundedSemaphore(16)
-  for timestamp in make_timestamp('2022-10-01T18:30', '2022-10-01T20:00'):
+  sem = asyncio.BoundedSemaphore(25)
+  for timestamp in make_timestamp('2022-09-01', '2022-11-01'):
     async with sem, aiohttp.ClientSession() as client:
       async with client.get(url='https://api.data.gov.hk/v1/historical-archive/get-file',
                             params={'url': 'https://resource.data.one.gov.hk/td/traffic-detectors/rawSpeedVol-all.xml',
@@ -101,7 +101,7 @@ async def fetch_traffic_detectors_data():
           print(f'Download {output_file} (#timestamp={timestamp})')
           async with aiofile.async_open(output_file, 'w') as f:
             writer = AsyncWriter(f)
-            await writer.writerows(content)
+            loop.create_task(writer.writerows(content))
 
 
 if __name__ == '__main__':
