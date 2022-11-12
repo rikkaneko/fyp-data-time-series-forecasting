@@ -125,6 +125,7 @@ async def fetch_all():
     if n >= LIMIT:
       await asyncio.gather(*tasks)
       tasks.clear()
+      n = 0
     tasks.append(loop.create_task(fetch_traffic_detectors_data(t)))
     n += 1
   await asyncio.gather(*tasks)
