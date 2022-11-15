@@ -3,3 +3,4 @@ aiofile
 xmltodict
 aiocsv
 python-dateutil
+zstandard
