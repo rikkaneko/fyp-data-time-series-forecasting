@@ -46,6 +46,8 @@ def extract_timestamp(file_title: str) -> datetime:
 
 
 def process_journey_data():
+  header = ['timestamp', 'journey_time']
+  journey_time_data: dict[str, list[list[int | str]]] = {}
   fifo_path = Path(BASE_DIR, '.fifo')
   if not fifo_path.exists():
     os.mkfifo(fifo_path)
@@ -62,17 +64,25 @@ def process_journey_data():
       content = f.read().decode('utf-8')
       reader = csv.reader(content.split('\n'))
       next(reader)
-      # TODO Transform the datasets to time-series 1-D data
-      print(f'---- {timestamp.isoformat()} ----')
       for row in reader:
         if not row:
           break
-        print(row)
-      print('-'*33)
+        road = f'{row[0]}-{row[1]}'
+        if road not in journey_time_data:
+          journey_time_data[road] = [header]
+        journey_time_data[road].append([timestamp.isoformat(), row[2]])
+
       ent = tar.next()
 
   p.join()
   print(f'Proccess do_zstd_extract() ended')
+
+  for name, record in journey_time_data.items():
+    record[1:] = sorted(record[1:], key=lambda e: e[0])
+    print(f'Writing to {name}.csv')
+    with open(Path(BASE_DIR / 'road', f'{name}.csv'), mode='w+') as f:
+      writer = csv.writer(f)
+      writer.writerows(record)
 
 
 if __name__ == '__main__':
