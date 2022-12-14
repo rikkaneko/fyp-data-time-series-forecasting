@@ -46,8 +46,9 @@ def extract_timestamp(file_title: str) -> datetime:
 
 
 def process_journey_data():
-  header = ['timestamp', 'journey_time']
-  journey_time_data: dict[str, list[list[int | str]]] = {}
+  # [timestamp, road -> journey_time]]
+  journey_time_data: list[list[dict[str, str] | str]] = [['timestamp']]
+  road: set[str] = set()
   fifo_path = Path(BASE_DIR, '.fifo')
   if not fifo_path.exists():
     os.mkfifo(fifo_path)
@@ -64,25 +65,33 @@ def process_journey_data():
       content = f.read().decode('utf-8')
       reader = csv.reader(content.split('\n'))
       next(reader)
+      journey_time: dict[str, str] = dict()
       for row in reader:
         if not row:
-          break
-        road = f'{row[0]}-{row[1]}'
-        if road not in journey_time_data:
-          journey_time_data[road] = [header]
-        journey_time_data[road].append([timestamp.isoformat(), row[2]])
+          continue
+        name = f'{row[0]}-{row[1]}'
+        road.add(name)
+        journey_time[name] = row[2]
 
+      journey_time_data.append([timestamp.isoformat(), journey_time])
       ent = tar.next()
 
   p.join()
   print(f'Proccess do_zstd_extract() ended')
+  os.remove(fifo_path)
 
-  for name, record in journey_time_data.items():
-    record[1:] = sorted(record[1:], key=lambda e: e[0])
-    print(f'Writing to {name}.csv')
-    with open(Path(BASE_DIR / 'road', f'{name}.csv'), mode='w+') as f:
-      writer = csv.writer(f)
-      writer.writerows(record)
+  journey_time_data[1:] = sorted(journey_time_data[1:], key=lambda e: e[0])
+  road_order = sorted(road)
+  journey_time_data[0].extend(road_order)
+  for idx, entry in enumerate(journey_time_data[1:]):
+    timestamp = entry[0]
+    journey_time = entry[1]
+    journey_time_data[idx+1] = [timestamp, *(journey_time.get(v, -1) for v in road_order)]
+
+  print(f'Writing to journal_time_data.csv')
+  with open(Path(BASE_DIR, 'journal_time_data.csv'), mode='w') as f:
+    writer = csv.writer(f)
+    writer.writerows(journey_time_data)
 
 
 if __name__ == '__main__':

@@ -4,3 +4,7 @@ xmltodict
 aiocsv
 python-dateutil
 zstandard
+numpy
+pandas
+matplotlib
+plotly
