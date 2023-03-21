@@ -13,11 +13,9 @@
 #
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import pandas
 import pandas as pd
 import numpy as np
 import os
-import typing
 import matplotlib.pyplot as plt
 import requests
 from plotly.subplots import make_subplots
@@ -110,19 +108,15 @@ def splint_and_normalize_dataset(data: pd.Series, *,
   return train_data, val_data, test_data
 
 
-def create_tf_dataset():
-  # TODO tensorflow datasets
-  pass
+print(cht_5m.head(10))
+train, val, test = splint_and_normalize_dataset(cht_5m)
+print(f'Train data shape={train.shape}')
+print(f'Validation data shape={val.shape}')
+print(f'Test data shape={test.shape}')
+plot([train, val, test], 'K02-CH', rows=1, cols=1,
+     subplot_titles=['Train', 'Validation', 'Test'], subplot_pos=[0, 0, 0])
 
+# Tensor input=[[1], [2], [3], [4], [5]] output=[6]
 
 if __name__ == '__main__':
-  print(cht_5m.head(10))
-  train, val, test = splint_and_normalize_dataset(cht_5m)
-  print(f'Train data shape={train.shape}')
-  print(f'Validation data shape={val.shape}')
-  print(f'Test data shape={test.shape}')
-  # plot([train], 'K02-CHT (Train)')
-  # plot([val], 'K02-CHT (Validation)')
-  # plot([test], 'K02-CHT (Test)')
-  plot([train, val, test], 'K02-CH', rows=1, cols=1,
-       subplot_titles=['Train', 'Validation', 'Test'], subplot_pos=[0, 0, 0])
+  pass
