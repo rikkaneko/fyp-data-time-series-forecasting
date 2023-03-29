@@ -32,7 +32,7 @@ JOURNEY_DATA_TIMESTAMP_PAT = re.compile(r'.*(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})
 # Extract zstd stream and pipe to fifo
 def do_zstd_extract(output_name: Path):
   print(f'Started proccess do_zstd_extract() (PID=#{os.getpid()})')
-  ifh = open(Path(BASE_DIR, 'journey-data.tar.zstd'), 'rb')
+  ifh = open(Path(BASE_DIR, 'journey-data-2.tar.zstd'), 'rb')
   ofh = open(output_name, 'wb')
   dec = ZstdDecompressor()
   dec.copy_stream(ifh, ofh, read_size=8192, write_size=8192)
@@ -89,7 +89,7 @@ def process_journey_data():
     journey_time_data[idx+1] = [timestamp, *(journey_time.get(v, -1) for v in road_order)]
 
   print(f'Writing to journal_time_data.csv')
-  with open(Path(BASE_DIR, 'journal_time_data.csv'), mode='w') as f:
+  with open(Path(BASE_DIR, 'journal_time_data-2.csv'), mode='w') as f:
     writer = csv.writer(f)
     writer.writerows(journey_time_data)
 

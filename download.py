@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Callable
 from aiocsv import AsyncWriter
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 import asyncio
 import aiohttp
@@ -30,12 +31,16 @@ import dateutil.parser
 # For journey data, the earliest available START_TIME = '2021-05-27T08:53'
 REQUEST_LIMIT = 25
 CONCURRENT_LIMIT = 150
+
+current = datetime.now()
+
+
 OPTIONS: dict[str, Any] = {
-  'traffic-data': {
-    'START_TIME': '2021-11-11',
-    'END_TIME': '2022-11-11',
-    'DATA_DIR': Path('data/traffic-detectors-speed')
-  },
+  # 'traffic-data': {
+  #   'START_TIME': '2021-11-11',
+  #   'END_TIME': '2022-11-11',
+  #   'DATA_DIR': Path('data/traffic-detectors-speed')
+  # },
   'journey-data': {
     'START_TIME': '2021-11-11',
     'END_TIME': '2022-11-11',
