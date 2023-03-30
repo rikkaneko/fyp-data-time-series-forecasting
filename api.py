@@ -15,8 +15,8 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import uvicorn
-from typing import Annotated
-from fastapi import FastAPI, Query
+from typing import Annotated, Literal
+from fastapi import FastAPI, Query, Response, status
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -71,13 +71,14 @@ cht['K02-CH'] = cht['K02-CH'].rolling(6).mean().shift(periods=-2).fillna(cht_mea
 # K02-EH (Eastern Harbour Crossing)
 eht = df[['K02-EH', 'week_day', 'hour', 'minute']]
 # Replace the invalid data with the average value instead of removing it
-eht_mean = eht.loc[:,'K02-EH'].mean()
-eht.loc[:,'K02-EH'].replace(-1, eht_mean, inplace=True)
+eht_mean = eht.loc[:, 'K02-EH'].mean()
+eht.loc[:, 'K02-EH'].replace(-1, eht_mean, inplace=True)
 # Smooth traffic data by move average
 eht['K02-EH'] = eht['K02-EH'].rolling(6).mean().shift(periods=-2).fillna(eht_mean)
 
 # ??? (Western Harbour Crossing)
 # TODO Find the suitable data columns
+wht = pd.DataFrame()
 
 # Prediction horizon
 # Use the past n_steps  data points to predict the next n_horizon data points
@@ -101,9 +102,34 @@ async def predict(time: Annotated[datetime | None, Query()] = datetime.now()):
 
 
 @app.get("/fetch")
-async def fetch(start_time: Annotated[datetime, Query()], end_time: Annotated[datetime, Query()]):
-  # TODO Return the actual journey data from `start_time` to `end_time`
-  return {"results": []}
+async def fetch(tunnel: Literal["cht", "eht", "wht"],
+                start_time: Annotated[datetime, Query()],
+                end_time: Annotated[datetime, Query()],
+                response: Response):
+  start_time = start_time.replace(second=0, microsecond=0)
+  end_time = end_time.replace(second=0, microsecond=0)
+
+  data = cht if tunnel == "cht" \
+    else eht if tunnel == "eht" \
+    else wht if tunnel == "wht" \
+    else None
+
+  if data is None:
+    return {}
+
+  if start_time < data.index[0] or end_time > data.index[-1]:
+    response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+    return {
+      "error": "Index out of range, the available time range is " +
+               data.index[0].to_pydatetime().isoformat() + " to " +
+               data.index[-1].to_pydatetime().isoformat()
+    }
+
+  return {
+    "start_time": start_time.isoformat(),
+    "end_time": end_time.isoformat(),
+    "results": eht.loc[start_time:end_time, 'K02-EH'].to_list()
+  }
 
 
 if __name__ == "__main__":

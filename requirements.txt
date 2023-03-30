@@ -11,3 +11,5 @@ plotly
 tensorflow
 keras
 scikit-learn
+fastapi
+uvicorn
