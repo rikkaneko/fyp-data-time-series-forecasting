@@ -23,13 +23,9 @@ import numpy as np
 import os
 import requests
 from pathlib import Path
-from plotly.subplots import make_subplots
-import plotly.graph_objs as go
 from zstandard import ZstdCompressionWriter, ZstdDecompressor
-import tensorflow as tf
-from sklearn.preprocessing import MinMaxScaler
-from numpy import array2string
-from datetime import datetime
+# import tensorflow as tf
+from datetime import datetime, timedelta
 
 DATASET_FILE_PATH = 'journal_time_data_hk.csv'
 if not Path(DATASET_FILE_PATH).exists():
@@ -52,7 +48,7 @@ df.drop('timestamp', axis=1, inplace=True)
 
 # Filter invalid time
 skip_date = pd.to_datetime("2022-07-11")
-util_date = pd.to_datetime("2023-11-10")
+util_date = pd.to_datetime("2022-11-10")
 df = df[(df.index > skip_date) & (df.index <= util_date)]
 
 df = df.resample('5Min').interpolate(method='time').iloc[1:]
@@ -85,6 +81,11 @@ wht = pd.DataFrame()
 n_steps = 12 * 6
 n_horizon = 12 * 3
 
+
+def round_dt(dt, delta=timedelta(minutes=5)) -> datetime:
+  dt = dt.replace(microsecond=0)
+  return dt + (datetime.min - dt) % delta
+
 app = FastAPI()
 
 
@@ -94,8 +95,11 @@ async def root():
 
 
 @app.get("/predict")
-async def predict(time: Annotated[datetime | None, Query()] = datetime.now()):
-  time = time.replace(second=0, microsecond=0)
+async def predict(time: Annotated[datetime | None, Query()]):
+  if time is None:
+    time = datetime.now() - timedelta(minutes=5)
+
+  time = round_dt(time)
   # TODO Return the predict journey data after `time`
   # When time is None, attempt to fetch the previous n_steps journey data from upstream API
   return {"time": time.isoformat(), predict: []}
@@ -106,8 +110,8 @@ async def fetch(tunnel: Literal["cht", "eht", "wht"],
                 start_time: Annotated[datetime, Query()],
                 end_time: Annotated[datetime, Query()],
                 response: Response):
-  start_time = start_time.replace(second=0, microsecond=0)
-  end_time = end_time.replace(second=0, microsecond=0)
+  start_time = round_dt(start_time)
+  end_time = round_dt(end_time)
 
   data = cht if tunnel == "cht" \
     else eht if tunnel == "eht" \
