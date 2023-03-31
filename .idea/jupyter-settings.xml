@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JupyterPersistentConnectionParameters">
+    <option name="knownRemoteServers">
+      <list>
+        <JupyterConnectionParameters>
+          <option name="authType" value="notebook" />
+          <option name="token" value="ab5bced82279f9a0a12fd0fe9f854083d1fc8289ce1f5e50" />
+          <option name="urlString" value="http://127.0.0.1:8888/" />
+          <authParams2>
+            <map>
+              <entry key="token" value="ab5bced82279f9a0a12fd0fe9f854083d1fc8289ce1f5e50" />
+            </map>
+          </authParams2>
+        </JupyterConnectionParameters>
+        <JupyterConnectionParameters>
+          <option name="authType" value="notebook" />
+          <option name="token" value="635d72df5f5a29c5e6daab73045679f0597eac642b4b3074" />
+          <option name="urlString" value="https://homelabs-proxy.nekoul.com:8443/" />
+          <authParams2>
+            <map>
+              <entry key="token" value="635d72df5f5a29c5e6daab73045679f0597eac642b4b3074" />
+            </map>
+          </authParams2>
+        </JupyterConnectionParameters>
+        <JupyterConnectionParameters>
+          <option name="authType" value="notebook" />
+          <option name="urlString" value="https://proxy.nekoul.com:8443" />
+          <authParams2>
+            <map />
+          </authParams2>
+        </JupyterConnectionParameters>
+      </list>
+    </option>
+    <option name="moduleParameters">
+      <map>
+        <entry key="$PROJECT_DIR$/../EIE4112-Lab2/.idea/EIE4112-Lab2.iml">
+          <value>
+            <JupyterConnectionParameters>
+              <option name="authType" value="notebook" />
+              <option name="token" value="ab5bced82279f9a0a12fd0fe9f854083d1fc8289ce1f5e50" />
+              <option name="urlString" value="http://127.0.0.1:8888/" />
+              <authParams2>
+                <map>
+                  <entry key="token" value="ab5bced82279f9a0a12fd0fe9f854083d1fc8289ce1f5e50" />
+                </map>
+              </authParams2>
+            </JupyterConnectionParameters>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../EIE4112-Lab3/.idea/EIE4112-Lab3.iml">
+          <value>
+            <JupyterConnectionParameters>
+              <option name="authType" value="notebook" />
+              <option name="urlString" value="https://proxy.nekoul.com:8443" />
+              <authParams2>
+                <map />
+              </authParams2>
+            </JupyterConnectionParameters>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/fyp-data-time-series-forecasting.iml">
+          <value>
+            <JupyterConnectionParameters>
+              <option name="managed" value="true" />
+            </JupyterConnectionParameters>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
