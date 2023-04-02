@@ -56,7 +56,7 @@ df['week_day'] = df.index.dayofweek.values
 df['hour'] = df.index.hour.values
 df['minute'] = df.index.minute.values
 
-MODEL_DIR = 'jupyter/model'
+MODEL_DIR = 'model'
 
 # TODO Use the pre-processed dataset
 # K02-CH (Cross-Harbour Tunnel)
@@ -108,11 +108,13 @@ async def root():
 @app.get("/predict")
 async def predict(tunnel: Literal["cht", "eht", "wht"],
                   time: Annotated[datetime | None, Query()],
-                  response: Response):
+                  response: Response,
+                  include_timestamp: Annotated[bool | None, Query()] = True):
   if time is None:
     time = datetime.now() - timedelta(minutes=5)
 
-  time = round_dt(time)
+  # Model input is [time1,time] inclusively
+  time = round_dt(time) - timedelta(minutes=5)
   time1 = time - timedelta(minutes=(n_steps - 1) * 5)
 
   # Select dataset
@@ -152,6 +154,16 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
   result = model.predict(np.expand_dims(model_input, axis=0))
   result = result.flatten()
 
+  if include_timestamp:
+    predict_start = time + timedelta(minutes=5)
+    predict_end = time + timedelta(minutes=n_horizon * 5)
+    timestamp = pd.date_range(start=predict_start, end=predict_end, freq='5min')
+    return {
+      "time": time.isoformat(),
+      "timestamp": timestamp.tolist(),
+      "predict": result.tolist()
+    }
+
   # When time is None, attempt to fetch the previous n_steps journey data from upstream API
   return {"time": time.isoformat(), "predict": result.tolist()}
 
@@ -160,7 +172,8 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
 async def fetch(tunnel: Literal["cht", "eht", "wht"],
                 start_time: Annotated[datetime, Query()],
                 end_time: Annotated[datetime, Query()],
-                response: Response):
+                response: Response,
+                include_timestamp: Annotated[bool | None, Query()] = True):
   start_time = round_dt(start_time)
   end_time = round_dt(end_time)
 
@@ -180,11 +193,22 @@ async def fetch(tunnel: Literal["cht", "eht", "wht"],
                data.index[-1].to_pydatetime().isoformat()
     }
 
-  return {
-    "start_time": start_time.isoformat(),
-    "end_time": end_time.isoformat(),
-    "results": eht.loc[start_time:end_time, 'K02-EH'].to_list()
-  }
+  result = data.loc[start_time:end_time, data.columns[0]]
+
+  if include_timestamp:
+    timestamp = result.index.strftime('%Y-%m-%d %H:%M')
+    return {
+      "start_time": start_time.isoformat(),
+      "end_time": end_time.isoformat(),
+      "timestamp": timestamp.tolist(),
+      "results": result.to_list()
+    }
+  else:
+    return {
+      "start_time": start_time.isoformat(),
+      "end_time": end_time.isoformat(),
+      "results": result.to_list()
+    }
 
 
 if __name__ == "__main__":
