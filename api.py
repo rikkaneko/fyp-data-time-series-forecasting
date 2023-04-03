@@ -17,6 +17,7 @@
 import uvicorn
 from typing import Annotated, Literal
 from fastapi import FastAPI, Query, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -98,6 +99,11 @@ def round_dt(dt, delta=timedelta(minutes=5)) -> datetime:
 
 
 app = FastAPI()
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["*"],
+  allow_methods=["GET"],
+)
 
 
 @app.get("/")
@@ -195,21 +201,17 @@ async def fetch(tunnel: Literal["cht", "eht", "wht"],
     }
 
   result = data.loc[start_time:end_time, data.columns[0]]
+  res = {
+    "start_time": start_time.isoformat(),
+    "end_time": end_time.isoformat(),
+    "results": result.to_list()
+  }
 
   if include_timestamp:
-    timestamp = result.index.strftime('%Y-%m-%d %H:%M')
-    return {
-      "start_time": start_time.isoformat(),
-      "end_time": end_time.isoformat(),
-      "timestamp": timestamp.tolist(),
-      "results": result.to_list()
-    }
-  else:
-    return {
-      "start_time": start_time.isoformat(),
-      "end_time": end_time.isoformat(),
-      "results": result.to_list()
-    }
+    timestamp = result.index
+    res["timestamp"] = timestamp.tolist()
+
+  return res
 
 
 @app.get("/get_meta")
@@ -217,7 +219,7 @@ def fetch_meta():
   return {
     "n_steps": n_steps,
     "n_horizon": n_horizon,
-    "timstamp_start": df.index[0].to_pydatetime().isoformat(),
+    "timestamp_start": df.index[0].to_pydatetime().isoformat(),
     "timestamp_end": df.index[-1].to_pydatetime().isoformat(),
   }
 

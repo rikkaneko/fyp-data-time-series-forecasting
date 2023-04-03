@@ -16,50 +16,155 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+const endpoint = 'http://127.0.0.1:8881';
+let meta = null;
+
 let tunnel = 'cht';
 
-$(function () {
+function show_pop_alert(message, alert_type = 'alert-primary', add_classes = null) {
+  remove_pop_alert();
+  $('#alert-container').prepend(jQuery.parseHTML(
+      `<div class="alert ${alert_type} alert-dismissible position-absolute fade show top-0 start-50 translate-middle-x" 
+            style="margin-top: 30px; max-width: 500px; width: 80%" id="pop_alert" role="alert"> \
+      <div>${message}</div> \
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button> \
+      </div>`,
+  ));
+  if (add_classes) {
+    $('.alert').addClass(add_classes);
+  }
+  window.scrollTo(0, 0);
+}
+
+function remove_pop_alert() {
+  const alert = $('#pop_alert');
+  if (alert.length)
+    alert.remove();
+}
+
+$(async function () {
   let plotly_div = $('#plot_div');
+  let select_tunnel_btn = $('#select_tunnel_btn');
+  let start_time_input = $('#start_time_input');
+  let end_time_input = $('#end_time_input');
+  let fetch_btn = $('#fetch_button');
+  let fetch_btn_icon = $('#fetch_button_icon');
+
+  $(window).on('resize', function () {
+    Plotly.relayout(plotly_div[0], {
+      autosize: true,
+    });
+  });
 
   $('#select_tunnel_menu li').on('click', function () {
     const val = $(this).text();
     tunnel = ['cht', 'eht', 'wht'].at($(this).val());
-    $('#select_tunnel_btn').text(val);
+    select_tunnel_btn.text(val);
+    // Plotly.relayout(plotly_div[0], {title: val})
   });
 
-  // Example plot
-  let trace1 = {
-    x: [1, 2, 3, 4],
-    y: [10, 15, 13, 17],
-    mode: 'markers',
-    name: 'Scatter'
-  };
+  fetch_btn.on('click', async function () {
+    try {
+      const start_time = start_time_input.val();
+      const end_time = end_time_input.val();
+      const res = await fetch(`${endpoint}/fetch?` + new URLSearchParams({
+        tunnel,
+        start_time,
+        end_time,
+      }));
 
-  let trace2 = {
-    x: [2, 3, 4, 5],
-    y: [16, 5, 11, 9],
+      if (!res.ok) {
+        alert('Unable to fetch /fetch');
+      }
+      const data = await res.json();
+
+      // Update plot data
+      const data_update = {
+        x: [data['timestamp']],
+        y: [data['results']],
+      };
+
+      const layout_update = {
+        title: select_tunnel_btn.text(),
+        xaxis: [[]],
+        yaxis: [[]]
+      }
+
+      Plotly.update(plotly_div[0], data_update, layout_update, [0]);
+
+      // Update button icon state
+      fetch_btn_icon.removeClass('bi-chevron-right');
+      fetch_btn_icon.addClass('bi-check-lg');
+      setTimeout(() => {
+        fetch_btn_icon.removeClass('bi-check-lg');
+        fetch_btn_icon.addClass('bi-chevron-right');
+      }, 3000);
+
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  // Fetch meta
+  try {
+    const res = await fetch(`${endpoint}/get_meta`);
+    if (!res.ok) {
+      alert('Unable to fetch /get_meta');
+    }
+    meta = await res.json();
+  } catch (err) {
+    alert(err.message);
+  }
+
+  start_time_input.prop('min', meta['timstamp_start']);
+  start_time_input.prop('max', meta['timestamp_end']);
+  start_time_input.val(meta['timestamp_start']);
+  end_time_input.prop('min', meta['timestamp_start']);
+  end_time_input.prop('max', meta['timestamp_end']);
+  end_time_input.val(meta['timestamp_end']);
+
+  // Plot data
+  let actuals = {
+    x: [],
+    y: [],
     mode: 'lines',
-    name: 'Lines'
+    name: 'Actuals',
+    line: {
+      color: '#636efa'
+    },
   };
 
-  let trace3 = {
-    x: [1, 2, 3, 4],
-    y: [12, 9, 15, 12],
-    mode: 'lines+markers',
-    name: 'Scatter and Lines'
+  let predictions = {
+    x: [],
+    y: [],
+    mode: 'lines',
+    name: 'Predictions',
+    line: {
+      color: '#ef553b'
+    },
   };
 
-  let data = [trace1, trace2, trace3];
+  let data = [actuals, predictions];
 
   let layout = {
-    title: 'Title of the Graph',
+    autosize: true,
+    hovermode: 'closest',
+    title: select_tunnel_btn.text(),
+    plot_bgcolor: '#e5ecf6',
     xaxis: {
-      title: 'x-axis title'
+      title: 'Timestamp',
+      gridcolor: '#ffffff',
     },
     yaxis: {
-      title: 'y-axis title'
+      title: 'Jounrey time',
+      gridcolor: '#ffffff',
     }
   };
 
-  Plotly.plot(plotly_div[0], data, layout);
+  let config = {
+    responsive: true,
+    showTips: false
+  };
+
+  Plotly.newPlot(plotly_div[0], data, layout, config);
 });
