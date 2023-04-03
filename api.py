@@ -131,9 +131,9 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
 
   if time1 < data.index[0]:
     response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-    eariler_time = data.index[0].to_pydatetime() + timedelta(minutes=(n_steps - 1) * 5)
+    eariler_time = data.index[0].to_pydatetime() + timedelta(minutes=n_steps * 5)
     return {
-      "error": f"Index out of range, the earlist available time is {eariler_time.isoformat()}"
+      "error": f"Index out of range, the earlist available time is {eariler_time}"
     }
 
   # Use existing dataset
@@ -142,6 +142,7 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
     model_input = data.loc[time1:time].to_numpy()
   else:
     # TODO Fetch from upstream
+    # When time is None, attempt to fetch the previous n_steps journey data from upstream API
     pass
 
   if model_input is None:
@@ -153,19 +154,19 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
   # Predict the next n_horizon data point
   result = model.predict(np.expand_dims(model_input, axis=0))
   result = result.flatten()
+  predict_start = time + timedelta(minutes=5)
+  predict_end = time + timedelta(minutes=n_horizon * 5)
+  next_iter = predict_end + timedelta(minutes=5)
+  if next_iter > data.index[-1]:
+    next_iter = None
+
+  res = {"time": predict_start, "predict": result.tolist(), "next": next_iter}
 
   if include_timestamp:
-    predict_start = time + timedelta(minutes=5)
-    predict_end = time + timedelta(minutes=n_horizon * 5)
     timestamp = pd.date_range(start=predict_start, end=predict_end, freq='5min')
-    return {
-      "time": time.isoformat(),
-      "timestamp": timestamp.tolist(),
-      "predict": result.tolist()
-    }
+    res["timestamp"] = timestamp.tolist()
 
-  # When time is None, attempt to fetch the previous n_steps journey data from upstream API
-  return {"time": time.isoformat(), "predict": result.tolist()}
+  return res
 
 
 @app.get("/fetch")
@@ -209,6 +210,16 @@ async def fetch(tunnel: Literal["cht", "eht", "wht"],
       "end_time": end_time.isoformat(),
       "results": result.to_list()
     }
+
+
+@app.get("/get_meta")
+def fetch_meta():
+  return {
+    "n_steps": n_steps,
+    "n_horizon": n_horizon,
+    "timstamp_start": df.index[0].to_pydatetime().isoformat(),
+    "timestamp_end": df.index[-1].to_pydatetime().isoformat(),
+  }
 
 
 if __name__ == "__main__":
