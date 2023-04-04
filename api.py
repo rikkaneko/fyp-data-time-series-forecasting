@@ -204,14 +204,14 @@ async def fetch(tunnel: Literal["cht", "eht", "wht"],
     response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     return {
       "error": "Index out of range, the available time range is " +
-               data.index[0].to_pydatetime().isoformat() + " to " +
-               data.index[-1].to_pydatetime().isoformat()
+               data.index[0].to_pydatetime() + " to " +
+               data.index[-1].to_pydatetime()
     }
 
   result = data.loc[start_time:end_time, data.columns[0]]
   res = {
-    "start_time": start_time.isoformat(),
-    "end_time": end_time.isoformat(),
+    "start_time": start_time,
+    "end_time": end_time,
     "results": result.to_list()
   }
 
@@ -227,8 +227,9 @@ def fetch_meta():
   return {
     "n_steps": n_steps,
     "n_horizon": n_horizon,
-    "timestamp_start": df.index[0].to_pydatetime().isoformat(),
-    "timestamp_end": df.index[-1].to_pydatetime().isoformat(),
+    "earliest_predict_start": df.index[0].to_pydatetime() + timedelta(minutes=n_steps * 5),
+    "timestamp_start": df.index[0].to_pydatetime(),
+    "timestamp_end": df.index[-1].to_pydatetime(),
   }
 
 

@@ -42,6 +42,19 @@ function remove_pop_alert() {
     alert.remove();
 }
 
+function get_local_isotime(time) {
+  const tzoffset = time.getTimezoneOffset() * 60000;
+  return (new Date(time.getTime() - tzoffset)).toISOString().slice(0, 16);
+}
+
+function get_random_date(start, end) {
+  const start_time = new Date(start);
+  const end_time = new Date(end);
+  const time = new Date(start_time.getTime() + Math.random() * (end_time.getTime() - start_time.getTime()))
+  return get_local_isotime(time);
+}
+
+
 $(async function () {
   let plotly_div = $('#plot_div');
   let select_tunnel_btn = $('#select_tunnel_btn');
@@ -54,6 +67,9 @@ $(async function () {
   let predict_btn_icon = $('#predict_button_icon');
   let show_actual_checkbox = $('#show_actual_checkbox');
   let next_day_btn = $('#next_day_button');
+  let predict_all_btn = $('#predict_all_button');
+  let predict_all_btn_icon = $('#predict_all_button_icon');
+  let shuffle_button = $('#shuffle_button');
 
   $(window).on('resize', function () {
     Plotly.relayout(plotly_div[0], {
@@ -79,6 +95,7 @@ $(async function () {
       }));
 
       if (!res.ok) {
+        fetch_btn_icon.addClass('bi-x');
         alert('Unable to fetch /fetch');
         return;
       }
@@ -86,25 +103,25 @@ $(async function () {
 
       // Update plot data
       const data_update = {
-        x: [data["timestamp"]],
-        y: [data["results"]],
+        x: [data["timestamp"], []],
+        y: [data["results"], []],
         name: ["Actuals"],
       };
 
       const layout_update = {
         title: select_tunnel_btn.text(),
         xaxis: [[]],
-        yaxis: [[]]
+        yaxis: {range: [4, 35]}
       }
 
-      Plotly.update(plotly_div[0], data_update, layout_update, [0]);
+      Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
 
       // Update button icon state
-      fetch_btn_icon.removeClass('bi-chevron-right');
-      fetch_btn_icon.addClass('bi-check-lg');
+      fetch_btn_icon.removeClass();
+      fetch_btn_icon.addClass('bi bi-check-lg');
       setTimeout(() => {
-        fetch_btn_icon.removeClass('bi-check-lg');
-        fetch_btn_icon.addClass('bi-chevron-right');
+        fetch_btn_icon.removeClass();
+        fetch_btn_icon.addClass('bi bi-chevron-right');
       }, 3000);
 
     } catch (err) {
@@ -153,11 +170,11 @@ $(async function () {
       Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
 
       // Update button icon state
-      predict_btn_icon.removeClass('bi-chevron-right');
-      predict_btn_icon.addClass('bi-check-lg');
+      predict_btn_icon.removeClass();
+      predict_btn_icon.addClass('bi bi-check-lg');
       setTimeout(() => {
-        predict_btn_icon.removeClass('bi-check-lg');
-        predict_btn_icon.addClass('bi-chevron-right');
+        predict_btn_icon.removeClass();
+        predict_btn_icon.addClass('bi bi-chevron-right');
       }, 3000);
 
     } catch (err) {
@@ -170,7 +187,35 @@ $(async function () {
     const max_date = new Date(meta['timestamp_end']);
     date.setDate(date.getDate() + 1);
     if (date <= max_date) {
-      predict_time_input.val(date.toISOString().slice(0, 16));
+      predict_time_input.val(get_local_isotime(date));
+    }
+  });
+
+  predict_all_btn.on('click', async function () {
+    try {
+      // TODO Predict All
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  shuffle_button.on('click', function () {
+    predict_time_input.val(get_random_date(meta['timestamp_start'], meta['timestamp_end']));
+  });
+
+  // Enable bootstrap tooltips
+  const tooltip_trigger_list = [].slice.call($('[data-bs-toggle="tooltip"]'));
+  const tooltip_list = tooltip_trigger_list.map(function (e) {
+    return new bootstrap.Tooltip(e);
+  });
+
+  $('input[type=datetime-local]').on('input', function () {
+    const time_input = $(this);
+    const time = new Date(time_input.val());
+    if (time < new Date(time_input.prop('min'))) {
+      time_input.val(time_input.prop('min'));
+    } else if (time > new Date(time_input.prop('max'))) {
+      time_input.val(time_input.prop('max'));
     }
   });
 
@@ -191,9 +236,9 @@ $(async function () {
   end_time_input.prop('min', meta['timestamp_start']);
   end_time_input.prop('max', meta['timestamp_end']);
   end_time_input.val(meta['timestamp_end']);
-  predict_time_input.prop('min', meta['timestamp_start']);
+  predict_time_input.prop('min', meta['earliest_predict_start']);
   predict_time_input.prop('max', meta['timestamp_end']);
-  predict_time_input.val(meta['timestamp_end']);
+  predict_time_input.val(get_random_date(meta['timestamp_start'], meta['timestamp_end']));
 
   // Plot data
   let actuals = {
@@ -230,7 +275,7 @@ $(async function () {
     yaxis: {
       title: 'Jounrey time',
       gridcolor: '#ffffff',
-      range: [4, 32],
+      range: [4, 35],
     }
   };
 
