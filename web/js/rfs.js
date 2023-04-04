@@ -49,6 +49,11 @@ $(async function () {
   let end_time_input = $('#end_time_input');
   let fetch_btn = $('#fetch_button');
   let fetch_btn_icon = $('#fetch_button_icon');
+  let predict_time_input = $('#predict_time_input');
+  let predict_button = $('#predict_button');
+  let predict_btn_icon = $('#predict_button_icon');
+  let show_actual_checkbox = $('#show_actual_checkbox');
+  let next_day_btn = $('#next_day_button');
 
   $(window).on('resize', function () {
     Plotly.relayout(plotly_div[0], {
@@ -75,13 +80,15 @@ $(async function () {
 
       if (!res.ok) {
         alert('Unable to fetch /fetch');
+        return;
       }
       const data = await res.json();
 
       // Update plot data
       const data_update = {
-        x: [data['timestamp']],
-        y: [data['results']],
+        x: [data["timestamp"]],
+        y: [data["results"]],
+        name: ["Actuals"],
       };
 
       const layout_update = {
@@ -105,6 +112,68 @@ $(async function () {
     }
   });
 
+  predict_button.on('click', async function () {
+    try {
+      const time = predict_time_input.val();
+      const res = await fetch(`${endpoint}/predict?` + new URLSearchParams({
+        tunnel,
+        time,
+      }));
+
+      if (!res.ok) {
+        alert('Unable to fetch /predict');
+        return;
+      }
+      const data = await res.json();
+
+      // Update plot data
+      const data_update = {
+        x: [data['input_data']['timestamp'], data['timestamp']],
+        y: [data['input_data']['data'], data['predict']],
+      };
+
+      if (!!data['next'] && show_actual_checkbox.prop('checked')) {
+        const res = await fetch(`${endpoint}/fetch?` + new URLSearchParams({
+          tunnel,
+          start_time: data['timestamp'][0],
+          end_time: data['timestamp'][data['timestamp'].length - 1],
+        }));
+
+        const data1 = await res.json();
+
+        data_update.x[0] = data_update.x[0].concat(data1['timestamp']);
+        data_update.y[0] = data_update.y[0].concat(data1['results']);
+      }
+
+      const layout_update = {
+        title: select_tunnel_btn.text(),
+        xaxis: [[]],
+      }
+
+      Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
+
+      // Update button icon state
+      predict_btn_icon.removeClass('bi-chevron-right');
+      predict_btn_icon.addClass('bi-check-lg');
+      setTimeout(() => {
+        predict_btn_icon.removeClass('bi-check-lg');
+        predict_btn_icon.addClass('bi-chevron-right');
+      }, 3000);
+
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  next_day_btn.on('click', function () {
+    const date = new Date(predict_time_input.val());
+    const max_date = new Date(meta['timestamp_end']);
+    date.setDate(date.getDate() + 1);
+    if (date <= max_date) {
+      predict_time_input.val(date.toISOString().slice(0, 16));
+    }
+  });
+
   // Fetch meta
   try {
     const res = await fetch(`${endpoint}/get_meta`);
@@ -122,6 +191,9 @@ $(async function () {
   end_time_input.prop('min', meta['timestamp_start']);
   end_time_input.prop('max', meta['timestamp_end']);
   end_time_input.val(meta['timestamp_end']);
+  predict_time_input.prop('min', meta['timestamp_start']);
+  predict_time_input.prop('max', meta['timestamp_end']);
+  predict_time_input.val(meta['timestamp_end']);
 
   // Plot data
   let actuals = {
@@ -158,6 +230,7 @@ $(async function () {
     yaxis: {
       title: 'Jounrey time',
       gridcolor: '#ffffff',
+      range: [4, 32],
     }
   };
 

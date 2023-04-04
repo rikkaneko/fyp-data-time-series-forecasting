@@ -115,7 +115,8 @@ async def root():
 async def predict(tunnel: Literal["cht", "eht", "wht"],
                   time: Annotated[datetime | None, Query()],
                   response: Response,
-                  include_timestamp: Annotated[bool | None, Query()] = True):
+                  include_timestamp: Annotated[bool | None, Query()] = True,
+                  include_input: Annotated[bool | None, Query()] = True):
   if time is None:
     time = datetime.now() - timedelta(minutes=5)
 
@@ -145,7 +146,7 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
   # Use existing dataset
   model_input = None
   if time <= data.index[-1]:
-    model_input = data.loc[time1:time].to_numpy()
+    model_input = data.loc[time1:time]
   else:
     # TODO Fetch from upstream
     # When time is None, attempt to fetch the previous n_steps journey data from upstream API
@@ -158,7 +159,7 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
     }
 
   # Predict the next n_horizon data point
-  result = model.predict(np.expand_dims(model_input, axis=0))
+  result = model.predict(np.expand_dims(model_input.to_numpy(), axis=0))
   result = result.flatten()
   predict_start = time + timedelta(minutes=5)
   predict_end = time + timedelta(minutes=n_horizon * 5)
@@ -171,6 +172,13 @@ async def predict(tunnel: Literal["cht", "eht", "wht"],
   if include_timestamp:
     timestamp = pd.date_range(start=predict_start, end=predict_end, freq='5min')
     res["timestamp"] = timestamp.tolist()
+
+  if include_input:
+    input_data = {
+      "timestamp": model_input.index.tolist(),
+      "data": model_input.iloc[:, 0].tolist(),
+    }
+    res["input_data"] = input_data
 
   return res
 
