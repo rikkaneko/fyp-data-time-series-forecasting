@@ -69,30 +69,35 @@
     <div class="d-flex justify-content-center vh-100 mt-3">
       <div class="container-fluid">
         <div class="w-100" style="height: 500px;" id="plot_div"></div>
-        <div class="mb-2">
-          <span class="text-secondary h6">Historical data</span>
-        </div>
-        <div class="w-25">
-          <div class="mb-2 row">
-            <label for="start_time_input" class="col-1 col-form-label" style="min-width: 50px;">Start</label>
-            <div class="col-6">
-              <input class="form-control" type="datetime-local" id="start_time_input" value="2022-07-11T00:05"
-                     min="2022-07-11T00:05" max="2023-03-20T23:55" style="min-width: 250px;">
+        <div class="d-flex justify-content-center">
+          <div>
+            <div class="mb-3">
+              <span class="text-secondary h6">Historical data</span>
+            </div>
+            <div>
+              <div class="mb-3 row">
+                <label for="start_time_input" class="col-1 col-form-label" style="min-width: 50px;">Start</label>
+                <div class="col-6">
+                  <input class="form-control" type="datetime-local" id="start_time_input" value="2022-07-11T00:05"
+                         min="2022-07-11T00:05" max="2023-03-20T23:55" style="min-width: 250px;">
+                </div>
+              </div>
+              <div class="mb-3 row">
+                <label for="end_time_input" class="col-1 col-form-label" style="min-width: 50px;">End</label>
+                <div class="col-6">
+                  <input class="form-control" type="datetime-local" id="end_time_input" value="2023-03-20T23:55"
+                         min="2022-07-11T00:05" max="2023-03-20T23:55" style="min-width: 250px;">
+                </div>
+              </div>
+            </div>
+            <div class="mb-3 text-end">
+              <button type="button" class="btn btn-primary me-2" id="fetch_button">
+                <span>Fetch</span>
+                <i class="bi bi-chevron-right" id="fetch_button_icon"></i>
+              </button>
             </div>
           </div>
-          <div class="mb-2 row">
-            <label for="end_time_input" class="col-1 col-form-label" style="min-width: 50px;">End</label>
-            <div class="col-6">
-              <input class="form-control" type="datetime-local" id="end_time_input" value="2023-03-20T23:55"
-                     min="2022-07-11T00:05" max="2023-03-20T23:55" style="min-width: 250px;">
-            </div>
-          </div>
-        </div>
-        <div class="mb-2">
-          <button type="button" class="btn btn-primary me-2" id="fetch_button">
-            <span>Fetch</span>
-            <i class="bi bi-chevron-right" id="fetch_button_icon"></i>
-          </button>
+
         </div>
       </div>
     </div>
