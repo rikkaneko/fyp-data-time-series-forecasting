@@ -75,7 +75,7 @@ $(async function () {
   const layout_update = {
     title: select_tunnel_btn.text(),
     xaxis: {},
-    yaxis: {}
+    yaxis: {range: [2, 35]},
   }
 
   $(window).on('resize', function () {
@@ -355,7 +355,7 @@ $(async function () {
     yaxis: {
       title: 'Jounrey time',
       gridcolor: '#ffffff',
-      range: [4, 35],
+      range: [2, 35],
     }
   };
 

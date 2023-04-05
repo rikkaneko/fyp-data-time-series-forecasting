@@ -79,11 +79,17 @@ eht['K02-EH'] = eht['K02-EH'].rolling(6).mean().shift(periods=-2).fillna(eht_mea
 
 eht_model = load_model(f'{MODEL_DIR}/v23')
 
-# ??? (Western Harbour Crossing)
-# TODO Find the suitable data columns
-wht = pd.DataFrame()
+# K03-WH (Western Harbour Crossing)
+wht = df[['K03-WH', 'week_day', 'hour', 'minute']]
+# cht = cht[cht['K02-CH'] != -1]
+# Replace the invalid data with the average value instead of removing it
+wht_mean = wht.loc[:, 'K03-WH'].mean()
+wht.loc[:, 'K03-WH'].replace(-1, wht_mean, inplace=True)
 
-wht_model = load_model(f'{MODEL_DIR}/v19')
+# Smooth traffic data by move average
+wht['K03-WH'] = wht['K03-WH'].rolling(6).mean().shift(periods=-2).fillna(wht_mean)
+
+wht_model = load_model(f'{MODEL_DIR}/v25')
 
 # Prediction horizon
 # Use the past n_steps  data points to predict the next n_horizon data points
