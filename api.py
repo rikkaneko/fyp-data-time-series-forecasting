@@ -18,11 +18,10 @@ import uvicorn
 from typing import Annotated, Literal
 from fastapi import FastAPI, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
 import pandas as pd
 import numpy as np
-import os
 import requests
+import zipfile
 from pathlib import Path
 from zstandard import ZstdCompressionWriter, ZstdDecompressor
 from datetime import datetime, timedelta
@@ -58,6 +57,22 @@ df['hour'] = df.index.hour.values
 df['minute'] = df.index.minute.values
 
 MODEL_DIR = 'model'
+MODEL_ARCHIEVE = 'fyp_forecasting_best_models.zip'
+# Download all model versions if not exist
+if not Path(MODEL_DIR).exists():
+  print(f'Downloading {MODEL_ARCHIEVE}')
+  r = requests.get(f'https://files.nekoul.com/pub/{MODEL_ARCHIEVE}')
+  if not r.ok:
+    print('Unable to download the archieve')
+    exit(128)
+
+  with open(MODEL_ARCHIEVE, 'wb') as f:
+    f.write(r.content)
+
+  with zipfile.ZipFile(MODEL_ARCHIEVE, 'r') as zip_ref:
+    zip_ref.extractall('.')
+
+  print(f'Extracted all models')
 
 # TODO Use the pre-processed dataset
 # K02-CH (Cross-Harbour Tunnel)
