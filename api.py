@@ -27,7 +27,9 @@ from zstandard import ZstdCompressionWriter, ZstdDecompressor
 from datetime import datetime, timedelta
 from keras.models import load_model
 
-DATASET_FILE_PATH = 'journal_time_data_hk.csv'
+BASE_DATA_DIR = 'data'
+
+DATASET_FILE_PATH = f'{BASE_DATA_DIR}/journal_time_data_hk.csv'
 if not Path(DATASET_FILE_PATH).exists():
   print(f'Downloading journal_time_data_hk.csv.zst')
   r = requests.get('https://files.nekoul.com/pub/journal_time_data_hk.csv.zst')
@@ -56,7 +58,7 @@ df['week_day'] = df.index.dayofweek.values
 df['hour'] = df.index.hour.values
 df['minute'] = df.index.minute.values
 
-MODEL_DIR = 'model'
+MODEL_DIR = f'{BASE_DATA_DIR}/model'
 MODEL_ARCHIEVE = 'fyp_forecasting_best_models.zip'
 # Download all model versions if not exist
 if not Path(MODEL_DIR).exists():
@@ -70,7 +72,7 @@ if not Path(MODEL_DIR).exists():
     f.write(r.content)
 
   with zipfile.ZipFile(MODEL_ARCHIEVE, 'r') as zip_ref:
-    zip_ref.extractall('.')
+    zip_ref.extractall(BASE_DATA_DIR)
 
   print(f'Extracted all models')
 

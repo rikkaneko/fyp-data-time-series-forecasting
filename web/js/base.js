@@ -70,11 +70,12 @@ $(async function () {
   let predict_all_btn_icon = $('#predict_all_button_icon');
   let predict_all_btn_text = $('#predict_all_button_text');
   let shuffle_button = $('#shuffle_button');
+  let reset_button = $('#reset_button');
 
   let predict_all_started = false;
   const layout_update = {
     title: select_tunnel_btn.text(),
-    xaxis: {},
+    xaxis: {range: []},
     yaxis: {range: [2, 35]},
   }
 
@@ -111,9 +112,9 @@ $(async function () {
 
       // Update plot data
       const data_update = {
-        x: [data["timestamp"], []],
-        y: [data["results"], []],
-        name: ["Actuals"],
+        x: [data['timestamp'], []],
+        y: [data['results'], []],
+        name: ['Actuals', 'Predictions'],
       };
 
       Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
@@ -151,6 +152,7 @@ $(async function () {
       const data_update = {
         x: [data['input_data']['timestamp'], data['timestamp']],
         y: [data['input_data']['data'], data['predict']],
+        name: ['Actuals', 'Predictions']
       };
 
       if (!!data['next'] && show_actual_checkbox.prop('checked')) {
@@ -295,6 +297,11 @@ $(async function () {
     } else if (time > new Date(time_input.prop('max'))) {
       time_input.val(time_input.prop('max'));
     }
+  });
+
+  reset_button.on('click', function () {
+    start_time_input.val(meta['timestamp_start']);
+    end_time_input.val(meta['timestamp_end']);
   });
 
   // Fetch meta
