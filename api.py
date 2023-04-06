@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import os
 
 import uvicorn
 from typing import Annotated, Literal
@@ -23,11 +24,17 @@ import numpy as np
 import requests
 import zipfile
 from pathlib import Path
-from zstandard import ZstdCompressionWriter, ZstdDecompressor
+from zstandard import ZstdDecompressor
 from datetime import datetime, timedelta
 from keras.models import load_model
+import tensorflow as tf
+
+tf.get_logger().setLevel('WARN')
 
 BASE_DATA_DIR = 'data'
+# Environment variable
+WORKER_N = int(os.getenv('WORKER_N', 1))
+USE_HTTPS = int(os.getenv('USE_HTTPS', 0))
 
 DATASET_FILE_PATH = f'{BASE_DATA_DIR}/journal_time_data_hk.csv'
 if not Path(DATASET_FILE_PATH).exists():
@@ -80,7 +87,7 @@ if not Path(MODEL_DIR).exists():
 # K02-CH (Cross-Harbour Tunnel)
 cht = df[['K02-CH', 'week_day', 'hour', 'minute']]
 cht_mean = cht.loc[:, 'K02-CH'].mean()
-cht.loc[:, 'K02-CH'].replace(-1, cht_mean, inplace=True)
+cht['K02-CH'].replace(-1, cht_mean, inplace=True)
 # Smooth traffic data by move average
 cht['K02-CH'] = cht['K02-CH'].rolling(6).mean().shift(periods=-2).fillna(cht_mean)
 
@@ -90,7 +97,7 @@ cht_model = load_model(f'{MODEL_DIR}/v19')
 eht = df[['K02-EH', 'week_day', 'hour', 'minute']]
 # Replace the invalid data with the average value instead of removing it
 eht_mean = eht.loc[:, 'K02-EH'].mean()
-eht.loc[:, 'K02-EH'].replace(-1, eht_mean, inplace=True)
+eht['K02-EH'].replace(-1, eht_mean, inplace=True)
 # Smooth traffic data by move average
 eht['K02-EH'] = eht['K02-EH'].rolling(6).mean().shift(periods=-2).fillna(eht_mean)
 
@@ -101,7 +108,7 @@ wht = df[['K03-WH', 'week_day', 'hour', 'minute']]
 # cht = cht[cht['K02-CH'] != -1]
 # Replace the invalid data with the average value instead of removing it
 wht_mean = wht.loc[:, 'K03-WH'].mean()
-wht.loc[:, 'K03-WH'].replace(-1, wht_mean, inplace=True)
+wht['K03-WH'].replace(-1, wht_mean, inplace=True)
 
 # Smooth traffic data by move average
 wht['K03-WH'] = wht['K03-WH'].rolling(6).mean().shift(periods=-2).fillna(wht_mean)
@@ -257,4 +264,8 @@ def fetch_meta():
 
 
 if __name__ == "__main__":
-  uvicorn.run(app, host="127.0.0.1", port=8881)
+  if USE_HTTPS == 1:
+    uvicorn.run(app, host="0.0.0.0", port=8881, workers=WORKER_N,
+                ssl_keyfile="privkey.pem", ssl_certfile="fullchain.pem")
+  else:
+    uvicorn.run(app, host="0.0.0.0", port=8881, workers=WORKER_N)

@@ -89,7 +89,6 @@ $(async function () {
     const val = $(this).text();
     tunnel = ['cht', 'eht', 'wht'].at($(this).val());
     select_tunnel_btn.text(val);
-    // Plotly.relayout(plotly_div[0], {title: val})
   });
 
   fetch_btn.on('click', async function () {
@@ -116,6 +115,8 @@ $(async function () {
         y: [data['results'], []],
         name: ['Actuals', 'Predictions'],
       };
+
+      layout_update.title = select_tunnel_btn.text()
 
       Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
 
@@ -168,6 +169,8 @@ $(async function () {
         data_update.y[0] = data_update.y[0].concat(data1['results']);
       }
 
+      layout_update.title = select_tunnel_btn.text()
+
       Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
 
       // Update button icon state
@@ -209,6 +212,8 @@ $(async function () {
       x: [[]],
       y: [[]],
     };
+
+    layout_update.title = select_tunnel_btn.text()
 
     Plotly.update(plotly_div[0], data_update, layout_update, [0, 1]);
 
@@ -253,6 +258,8 @@ $(async function () {
         } else {
           is_first_time = false;
         }
+
+        layout_update.title = select_tunnel_btn.text()
 
         Plotly.extendTraces(plotly_div[0], data_extend, [0, 1]);
 

@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  app:
+    container_name: fyp_forecasting_api_server
+    image: rikkaneko/fyp_forecasting_api_server
+    build: .
+    ports:
+      - "8881:8881"
+    volumes:
+      - ./data:/app/data
+    environment:
+      WORKER_N: 1
+      USE_HTTPS: 0
