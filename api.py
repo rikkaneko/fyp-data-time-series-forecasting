@@ -245,6 +245,6 @@ def fetch_meta():
 if __name__ == "__main__":
   if USE_HTTPS == 1:
     uvicorn.run(app, host="0.0.0.0", port=8881, workers=WORKER_N,
-                ssl_keyfile="privkey.pem", ssl_certfile="fullchain.pem")
+                ssl_keyfile=f"{BASE_DATA_DIR}/privkey.pem", ssl_certfile=f"{BASE_DATA_DIR}/fullchain.pem")
   else:
     uvicorn.run(app, host="0.0.0.0", port=8881, workers=WORKER_N)
