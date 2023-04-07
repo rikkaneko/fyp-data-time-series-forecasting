@@ -27,43 +27,35 @@ from pathlib import Path
 from zstandard import ZstdDecompressor
 from datetime import datetime, timedelta
 from keras.models import load_model
-import tensorflow as tf
-
-tf.get_logger().setLevel('WARN')
 
 BASE_DATA_DIR = 'data'
 # Environment variable
 WORKER_N = int(os.getenv('WORKER_N', 1))
 USE_HTTPS = int(os.getenv('USE_HTTPS', 0))
 
-DATASET_FILE_PATH = f'{BASE_DATA_DIR}/journal_time_data_hk.csv'
-if not Path(DATASET_FILE_PATH).exists():
-  print(f'Downloading journal_time_data_hk.csv.zst')
-  r = requests.get('https://files.nekoul.com/pub/journal_time_data_hk.csv.zst')
-  if not r.ok:
-    print('Unable to download the datasets')
-    exit(128)
+DATESET_FILES = {
+  'cht': {'path': f'{BASE_DATA_DIR}/journal_time_data_cht.csv',
+          'download_url': 'https://files.nekoul.com/pub/journal_time_data_cht.csv.zst'},
+  'eht': {'path': f'{BASE_DATA_DIR}/journal_time_data_eht.csv',
+          'download_url': 'https://files.nekoul.com/pub/journal_time_data_eht.csv.zst'},
+  'wht': {'path': f'{BASE_DATA_DIR}/journal_time_data_wht.csv',
+          'download_url': 'https://files.nekoul.com/pub/journal_time_data_wht.csv.zst'}
+}
 
-  with open(DATASET_FILE_PATH, 'wb+') as f:
-    print(f'Decompressing {DATASET_FILE_PATH}')
-    dctx = ZstdDecompressor()
-    decompressor = dctx.stream_writer(f)
-    decompressor.write(r.content)
-    print(f'Decompression done')
+for tunnel in DATESET_FILES:
+  if not Path(DATESET_FILES[tunnel]['path']).exists():
+    print(f'Downloading {DATESET_FILES[tunnel]["path"]}')
+    r = requests.get(DATESET_FILES[tunnel]["download_url"])
+    if not r.ok:
+      print('Unable to download the datasets')
+      exit(128)
 
-df = pd.read_csv(DATASET_FILE_PATH)
-df.index = pd.to_datetime(df['timestamp'])
-df.drop('timestamp', axis=1, inplace=True)
-
-# Filter invalid time
-skip_date = pd.to_datetime("2022-07-11")
-util_date = pd.to_datetime("2023-11-10")
-df = df[(df.index > skip_date) & (df.index <= util_date)]
-
-df = df.resample('5Min').interpolate(method='time').iloc[1:]
-df['week_day'] = df.index.dayofweek.values
-df['hour'] = df.index.hour.values
-df['minute'] = df.index.minute.values
+    with open(DATESET_FILES[tunnel]['path'], 'wb+') as f:
+      print(f'Decompressing {DATESET_FILES[tunnel]["path"]}')
+      dctx = ZstdDecompressor()
+      decompressor = dctx.stream_writer(f)
+      decompressor.write(r.content)
+      print(f'Decompression done')
 
 MODEL_DIR = f'{BASE_DATA_DIR}/model'
 MODEL_ARCHIEVE = 'fyp_forecasting_best_models.zip'
@@ -83,37 +75,20 @@ if not Path(MODEL_DIR).exists():
 
   print(f'Extracted all models')
 
-# TODO Use the pre-processed dataset
 # K02-CH (Cross-Harbour Tunnel)
-cht = df[['K02-CH', 'week_day', 'hour', 'minute']]
-cht_mean = cht.loc[:, 'K02-CH'].mean()
-cht['K02-CH'].replace(-1, cht_mean, inplace=True)
-# Smooth traffic data by move average
-cht['K02-CH'] = cht['K02-CH'].rolling(6).mean().shift(periods=-2).fillna(cht_mean)
-
+cht = pd.read_csv(DATESET_FILES['cht']['path'])
 cht_model = load_model(f'{MODEL_DIR}/v19')
+print('Loaded CHT (dataset, model)')
 
 # K02-EH (Eastern Harbour Crossing)
-eht = df[['K02-EH', 'week_day', 'hour', 'minute']]
-# Replace the invalid data with the average value instead of removing it
-eht_mean = eht.loc[:, 'K02-EH'].mean()
-eht['K02-EH'].replace(-1, eht_mean, inplace=True)
-# Smooth traffic data by move average
-eht['K02-EH'] = eht['K02-EH'].rolling(6).mean().shift(periods=-2).fillna(eht_mean)
+eht = pd.read_csv(DATESET_FILES['eht']['path'])
+eht_model = load_model(f'{MODEL_DIR}/v25')
+print('Loaded EHT (dataset, model)')
 
-eht_model = load_model(f'{MODEL_DIR}/v23')
-
-# K03-WH (Western Harbour Crossing)
-wht = df[['K03-WH', 'week_day', 'hour', 'minute']]
-# cht = cht[cht['K02-CH'] != -1]
-# Replace the invalid data with the average value instead of removing it
-wht_mean = wht.loc[:, 'K03-WH'].mean()
-wht['K03-WH'].replace(-1, wht_mean, inplace=True)
-
-# Smooth traffic data by move average
-wht['K03-WH'] = wht['K03-WH'].rolling(6).mean().shift(periods=-2).fillna(wht_mean)
-
+# K03-WH (Eastern Harbour Crossing)
+wht = pd.read_csv(DATESET_FILES['wht']['path'])
 wht_model = load_model(f'{MODEL_DIR}/v25')
+print('Loaded WHT (dataset, model)')
 
 # Prediction horizon
 # Use the past n_steps  data points to predict the next n_horizon data points
