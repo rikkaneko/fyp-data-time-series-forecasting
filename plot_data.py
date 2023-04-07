@@ -14,20 +14,13 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import pandas as pd
-import numpy as np
-import os
-import matplotlib.pyplot as plt
 import requests
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 
 from pathlib import Path
 
-from zstandard import ZstdCompressionWriter, ZstdDecompressor
-
-import tensorflow as tf
-from tensorflow import keras
-from keras import layers
+from zstandard import ZstdDecompressor
 
 DATASET_FILE_PATH = 'data/hk_opendata_journey_data.csv'
 

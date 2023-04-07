@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Callable
 from aiocsv import AsyncWriter
 from datetime import datetime, timedelta
-from dateutil.relativedelta import relativedelta
 
 import asyncio
 import aiohttp

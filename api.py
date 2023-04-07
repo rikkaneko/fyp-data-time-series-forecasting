@@ -77,16 +77,22 @@ if not Path(MODEL_DIR).exists():
 
 # K02-CH (Cross-Harbour Tunnel)
 cht = pd.read_csv(DATESET_FILES['cht']['path'])
+cht.index = pd.to_datetime(cht['timestamp'])
+cht.drop('timestamp', axis=1, inplace=True)
 cht_model = load_model(f'{MODEL_DIR}/v19')
 print('Loaded CHT (dataset, model)')
 
 # K02-EH (Eastern Harbour Crossing)
 eht = pd.read_csv(DATESET_FILES['eht']['path'])
+eht.index = pd.to_datetime(eht['timestamp'])
+eht.drop('timestamp', axis=1, inplace=True)
 eht_model = load_model(f'{MODEL_DIR}/v25')
 print('Loaded EHT (dataset, model)')
 
 # K03-WH (Eastern Harbour Crossing)
 wht = pd.read_csv(DATESET_FILES['wht']['path'])
+wht.index = pd.to_datetime(wht['timestamp'])
+wht.drop('timestamp', axis=1, inplace=True)
 wht_model = load_model(f'{MODEL_DIR}/v25')
 print('Loaded WHT (dataset, model)')
 
@@ -232,9 +238,9 @@ def fetch_meta():
   return {
     "n_steps": n_steps,
     "n_horizon": n_horizon,
-    "earliest_predict_start": df.index[0].to_pydatetime() + timedelta(minutes=n_steps * 5),
-    "timestamp_start": df.index[0].to_pydatetime(),
-    "timestamp_end": df.index[-1].to_pydatetime(),
+    "earliest_predict_start": cht.index[0].to_pydatetime() + timedelta(minutes=n_steps * 5),
+    "timestamp_start": cht.index[0].to_pydatetime(),
+    "timestamp_end": cht.index[-1].to_pydatetime(),
   }
 
 
