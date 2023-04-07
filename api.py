@@ -13,6 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import io
 import os
 
 import uvicorn
@@ -62,16 +63,13 @@ MODEL_ARCHIEVE = 'fyp_forecasting_best_models.zip'
 # Download all model versions if not exist
 if not Path(MODEL_DIR).exists():
   print(f'Downloading {MODEL_ARCHIEVE}')
-  r = requests.get(f'https://files.nekoul.com/pub/{MODEL_ARCHIEVE}')
+  r = requests.get(f'https://files.nekoul.com/pub/{MODEL_ARCHIEVE}', stream=True)
   if not r.ok:
     print('Unable to download the archieve')
     exit(128)
 
-  with open(MODEL_ARCHIEVE, 'wb') as f:
-    f.write(r.content)
-
-  with zipfile.ZipFile(MODEL_ARCHIEVE, 'r') as zip_ref:
-    zip_ref.extractall(BASE_DATA_DIR)
+  with zipfile.ZipFile(io.BytesIO(r.content)) as zipfile:
+    zipfile.extractall(BASE_DATA_DIR)
 
   print(f'Extracted all models')
 
