@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  web:
+    container_name: fyp_forecasting_web
+    image: rikkaneko/fyp_forecasting_web
+    build: .
+    ports: 
+      - "8443:8443"
+    volumes: 
+      - ../data:/etc/nginx/certs
+      - ../web:/app
