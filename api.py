@@ -107,7 +107,15 @@ def round_dt(dt, delta=timedelta(minutes=5)) -> datetime:
   return dt1 if dt1 <= dt else dt1 - delta
 
 
-app = FastAPI()
+app = FastAPI(
+  title="FYP Road Forecasting System API",
+  description="Provide the journey time forecasting and historical data retrieval",
+  version="1.1",
+  license_info={
+    "name": "GNU Lesser General Public License v3",
+    "url": "https://www.gnu.org/licenses/lgpl-3.0.html",
+  },
+)
 app.add_middleware(
   CORSMiddleware,
   allow_origins=["*"],
