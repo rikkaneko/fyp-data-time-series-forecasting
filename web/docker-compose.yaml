@@ -6,7 +6,7 @@ services:
     image: rikkaneko/fyp_forecasting_web
     build: .
     ports: 
-      - "8443:8443"
+      - "8443:18443"
     volumes: 
       - ../data:/etc/nginx/certs
       - ./content:/app
