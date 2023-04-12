@@ -45,54 +45,54 @@ DATESET_FILES = {
 
 for tunnel in DATESET_FILES:
   if not Path(DATESET_FILES[tunnel]['path']).exists():
-    print(f'Downloading {DATESET_FILES[tunnel]["path"]}')
+    print(f'Downloading {DATESET_FILES[tunnel]["path"]}', flush=True)
     r = requests.get(DATESET_FILES[tunnel]["download_url"])
     if not r.ok:
-      print('Unable to download the datasets')
+      print('Unable to download the datasets', flush=True)
       exit(128)
 
     with open(DATESET_FILES[tunnel]['path'], 'wb+') as f:
-      print(f'Decompressing {DATESET_FILES[tunnel]["path"]}')
+      print(f'Decompressing {DATESET_FILES[tunnel]["path"]}', flush=True)
       dctx = ZstdDecompressor()
       decompressor = dctx.stream_writer(f)
       decompressor.write(r.content)
-      print(f'Decompression done')
+      print(f'Decompression done', flush=True)
 
 MODEL_DIR = f'{BASE_DATA_DIR}/model'
 MODEL_ARCHIEVE = 'fyp_forecasting_best_models.zip'
 # Download all model versions if not exist
 if not Path(MODEL_DIR).exists():
-  print(f'Downloading {MODEL_ARCHIEVE}')
+  print(f'Downloading {MODEL_ARCHIEVE}', flush=True)
   r = requests.get(f'https://files.nekoul.com/pub/{MODEL_ARCHIEVE}', stream=True)
   if not r.ok:
-    print('Unable to download the archieve')
+    print('Unable to download the archieve', flush=True)
     exit(128)
 
   with zipfile.ZipFile(io.BytesIO(r.content)) as zipfile:
     zipfile.extractall(BASE_DATA_DIR)
 
-  print(f'Extracted all models')
+  print(f'Extracted all models', flush=True)
 
 # K02-CH (Cross-Harbour Tunnel)
 cht = pd.read_csv(DATESET_FILES['cht']['path'])
 cht.index = pd.to_datetime(cht['timestamp'])
 cht.drop('timestamp', axis=1, inplace=True)
-cht_model = load_model(f'{MODEL_DIR}/v19')
-print('Loaded CHT (dataset, model)')
+cht_model = load_model(f'{MODEL_DIR}/cht')
+print('Loaded CHT (dataset, model)', flush=True)
 
 # K02-EH (Eastern Harbour Crossing)
 eht = pd.read_csv(DATESET_FILES['eht']['path'])
 eht.index = pd.to_datetime(eht['timestamp'])
 eht.drop('timestamp', axis=1, inplace=True)
-eht_model = load_model(f'{MODEL_DIR}/v25')
-print('Loaded EHT (dataset, model)')
+eht_model = load_model(f'{MODEL_DIR}/eht')
+print('Loaded EHT (dataset, model)', flush=True)
 
 # K03-WH (Eastern Harbour Crossing)
 wht = pd.read_csv(DATESET_FILES['wht']['path'])
 wht.index = pd.to_datetime(wht['timestamp'])
 wht.drop('timestamp', axis=1, inplace=True)
-wht_model = load_model(f'{MODEL_DIR}/v25')
-print('Loaded WHT (dataset, model)')
+wht_model = load_model(f'{MODEL_DIR}/wht')
+print('Loaded WHT (dataset, model)', flush=True)
 
 # Prediction horizon
 # Use the past n_steps  data points to predict the next n_horizon data points
