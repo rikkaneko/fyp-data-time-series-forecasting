@@ -33,14 +33,15 @@ BASE_DATA_DIR = 'data'
 # Environment variable
 WORKER_N = int(os.getenv('WORKER_N', 1))
 USE_HTTPS = int(os.getenv('USE_HTTPS', 0))
+DATA_BASE_URL='https://files.nekoid.cc'
 
 DATESET_FILES = {
   'cht': {'path': f'{BASE_DATA_DIR}/journal_time_data_cht.csv',
-          'download_url': 'https://files.nekoul.com/pub/journal_time_data_cht.csv.zst'},
+          'download_url': f'{DATA_BASE_URL}/pub/journal_time_data_cht.csv.zst'},
   'eht': {'path': f'{BASE_DATA_DIR}/journal_time_data_eht.csv',
-          'download_url': 'https://files.nekoul.com/pub/journal_time_data_eht.csv.zst'},
+          'download_url': f'{DATA_BASE_URL}/pub/journal_time_data_eht.csv.zst'},
   'wht': {'path': f'{BASE_DATA_DIR}/journal_time_data_wht.csv',
-          'download_url': 'https://files.nekoul.com/pub/journal_time_data_wht.csv.zst'}
+          'download_url': f'{DATA_BASE_URL}/pub/journal_time_data_wht.csv.zst'}
 }
 
 for tunnel in DATESET_FILES:
@@ -63,7 +64,7 @@ MODEL_ARCHIEVE = 'fyp_forecasting_best_models.zip'
 # Download all model versions if not exist
 if not Path(MODEL_DIR).exists():
   print(f'Downloading {MODEL_ARCHIEVE}', flush=True)
-  r = requests.get(f'https://files.nekoul.com/pub/{MODEL_ARCHIEVE}', stream=True)
+  r = requests.get(f'{DATA_BASE_URL}/pub/{MODEL_ARCHIEVE}', stream=True)
   if not r.ok:
     print('Unable to download the archieve', flush=True)
     exit(128)
